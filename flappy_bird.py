@@ -113,12 +113,14 @@ class FlappyBird:
         self.__SCREEN_WIDTH = 864
         self.__SCREEN_HEIGHT = 610
         self.__ZERO = 0                         # x=y=0
-        self.__MESSAGE_X = 340
-        self.__MESSAGE_Y = 100
+        self.MESSAGE_X = 340
+        self.MESSAGE_Y = 100
         self.__GROUND_Y = 442
-        self.__BIRD_X = 100
+        self.BIRD_X = 100
         self.FPS = 60
         self.COLLISION_ANGLE = 90
+        self.RESTART_X = self.__SCREEN_WIDTH//2 - 50
+        self.RESTART_Y = self.__SCREEN_HEIGHT//2 - 100
 
         # Defining variables
         self.collided_sky = False               # To create hitting effect
@@ -131,7 +133,8 @@ class FlappyBird:
         self.img_filenames = {
             'icon' : 'Images/bird up.png',
             'bg' : 'Images/bg.png',
-            'message': 'Images/message.png'
+            'message': 'Images/message.png',
+            'restart': 'Images/restart.png'
         }
 
         # Loading images 
@@ -159,7 +162,7 @@ class FlappyBird:
         self.ground_group.add(self.ground)
 
         # Creating Bird object and adding it to the Group
-        self.bird = Bird(self.__BIRD_X, self.__SCREEN_HEIGHT//3)
+        self.bird = Bird(self.BIRD_X, self.__SCREEN_HEIGHT//3)
         self.bird_group = pg.sprite.Group()
         self.bird_group.add(self.bird)
 
@@ -203,6 +206,35 @@ class FlappyBird:
                 self.collided_ground = True
 
 
+    # Generate Restart button when bird goes out of the screen
+    def show_restart_and_check_if_clicked(self, loaded_image: pg.Surface, coordinate: tuple):
+        global playing
+        playing = False             # Bird goes out of the screen
+                
+        # Blitting Restart button image
+        restart_button = self.SCREEN.blit(
+            loaded_image.convert_alpha(), 
+            coordinate
+            )
+        
+        # Check if the mouse is hovering over the restart button image and then clicked
+        if restart_button.collidepoint(pg.mouse.get_pos()) and pg.mouse.get_pressed()[0]:
+                self.reset_game()
+
+
+    # Reset the game
+    def reset_game(self):
+        global playing
+        global collided_screen
+
+        # Resetting game global variables
+        playing = True
+        collided_screen = False
+
+        # Resetting the bird
+        self.bird.__init__(self.BIRD_X, self.__SCREEN_HEIGHT//3)
+
+
     # Method for event handling
     def event_handler(self):
         global playing
@@ -243,8 +275,11 @@ class FlappyBird:
             self.ground_group.update()
 
             # Blitting the message
-            if not playing:
-                self.SCREEN.blit(self.images['message'].convert_alpha(), (self.__MESSAGE_X, self.__MESSAGE_Y))
+            if not playing and not collided_screen:
+                self.SCREEN.blit(
+                    self.images['message'].convert_alpha(), 
+                    (self.MESSAGE_X, self.MESSAGE_Y)
+                    )
 
             # Drawing the bird
             self.bird_group.draw(self.SCREEN)
@@ -263,9 +298,18 @@ class FlappyBird:
             elif playing and collided_screen:
                 self.generate_falling_effect()
 
-                # Falling of the bird
-                self.bird.bird_movement()
-                
+                # Falling of the bird and stop it when it is out of the screen
+                if self.bird.rect.top <= self.__SCREEN_HEIGHT:
+                    self.bird.bird_movement()
+
+            # When bird goes out of the screen (vanishes from the screen)
+            if self.bird.rect.top > self.__SCREEN_HEIGHT:
+
+                self.show_restart_and_check_if_clicked(
+                    self.images['restart'],
+                    (self.RESTART_X, self.RESTART_Y)
+                    )
+
             # Updating pygame display to create animation
             pg.display.update()
 
