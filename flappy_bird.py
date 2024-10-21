@@ -170,7 +170,39 @@ class FlappyBird:
         sound = pg.mixer.Sound(filename)
         sound.play()
 
+
+    # Defining what will happen at the collision with sky or ground
+    def collided_with_screen(self, current_image: str):
+        global collided_screen
+
+        # First load the current image to cancel the rotation, then rotate 90 degree
+        self.bird.image = pg.image.load(current_image).convert_alpha() 
+        self.bird.image = pg.transform.rotate(self.bird.image, -self.COLLISION_ANGLE)
+
+        self.play_sound(self.sound_filenames['hit'])
+        self.play_sound(self.sound_filenames['swoosh'])
+
+        collided_screen = True
+
     
+    # Method to create a falling effect after collision
+    def generate_falling_effect(self):
+        # If the bird hits the sky
+        if self.bird.rect.top <= self.__ZERO:
+            self.bird.rect.top = self.__ZERO            # Protect the bird from going out of the screen
+
+            self.collided_sky = True
+
+        # If the bird hits the ground
+        elif pg.sprite.groupcollide(self.bird_group, self.ground_group, False, False):
+                    
+            # Generate falling effect only if it does not hit the sky
+            if not self.collided_sky and not self.collided_ground:
+                self.bird.increase_y = SPEED * -3
+
+                self.collided_ground = True
+
+
     # Method for event handling
     def event_handler(self):
         global playing
@@ -197,8 +229,6 @@ class FlappyBird:
 
     # Main game loop
     def game_loop(self):
-        global collided_screen
-
         while True:
             # Update the clock
             self.clock.tick(self.FPS)
@@ -227,33 +257,11 @@ class FlappyBird:
 
                 # If bird hits the sky or the ground
                 if self.bird.rect.top <= self.__ZERO or self.bird.rect.bottom >= self.__GROUND_Y:
-                    
-                    # First load the current image to cancel the rotation, then rotate 90 degree
-                    self.bird.image = pg.image.load(self.bird.img_filenames[self.bird.index]).convert_alpha() 
-                    self.bird.image = pg.transform.rotate(self.bird.image, -self.COLLISION_ANGLE)
-
-                    self.play_sound(self.sound_filenames['hit'])
-                    self.play_sound(self.sound_filenames['swoosh'])
-
-                    collided_screen = True
+                    self.collided_with_screen(self.bird.img_filenames[self.bird.index])
             
             # After collision generating falling effect
             elif playing and collided_screen:
-
-                # If the bird hits the sky
-                if self.bird.rect.top <= self.__ZERO:
-                    self.bird.rect.top = self.__ZERO            # Protect the bird from going out of the screen
-
-                    self.collided_sky = True
-
-                # If the bird hits the ground
-                elif pg.sprite.groupcollide(self.bird_group, self.ground_group, False, False):
-                    
-                    # Generate falling effect only if it does not hit the sky
-                    if not self.collided_sky and not self.collided_ground:
-                        self.bird.increase_y = SPEED * -3
-
-                        self.collided_ground = True
+                self.generate_falling_effect()
 
                 # Falling of the bird
                 self.bird.bird_movement()
