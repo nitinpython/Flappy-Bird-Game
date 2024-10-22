@@ -10,7 +10,7 @@ SPEED = 4                       # Control the speed of Ground and Pipe scrolling
 
 # Defining global variables
 playing = False
-collided_screen = False
+collided = False
 
 
 # Class for Bird sprite
@@ -37,7 +37,7 @@ class Bird(pg.sprite.Sprite):
 
     def bird_movement(self):
         # Controlling rotation of the bird
-        if playing and not collided_screen:
+        if playing and not collided:
             angle = self.increase_y * -2
             self.image = pg.transform.rotate(self.image, angle).convert_alpha()
                     
@@ -59,7 +59,7 @@ class Bird(pg.sprite.Sprite):
     # Controlling the bird movement (flapping and flying)
     def update(self):
 
-        if not collided_screen:
+        if not collided:
 
             # Reducing the flapping speed by showing same image for 4 iterations
             if self.counter <= SPEED:   
@@ -94,7 +94,7 @@ class Ground(pg.sprite.Sprite):
 
     # Controlling scrolling animation
     def update(self):
-        if not collided_screen:
+        if not collided:
             self.rect.x -= SPEED
             if self.rect.x < self.scroll_limit:
                 self.rect.x = 0
@@ -128,7 +128,7 @@ class Pipe(pg.sprite.Sprite):
     
     def update(self):
         # Controlling scrolling animation
-        if playing and not collided_screen:
+        if playing and not collided:
             self.rect.x -= SPEED
 
             # Remove the pipe objects from the group when they move out of the game window
@@ -163,8 +163,9 @@ class FlappyBird:
         self.PIPE_Y_TO = 70                   # Upper limit for random y coordinate of pipe
 
         # Defining variables
-        self.collided_sky = False               # To create hitting effect
-        self.collided_ground = False            # To create hitting effect
+        self.collided_sky = False               # To create sky hitting effect
+        self.collided_ground = False            # To create ground hitting effect
+        self.collided_pipe = False              # To create pipe hitting effect
         self.last_pipe_time = None              # To track the time last pipe was generated
 
         # Game window
@@ -218,9 +219,9 @@ class FlappyBird:
         sound.play()
 
 
-    # Defining what will happen at the collision with sky or ground
-    def collided_with_screen(self, current_image: str):
-        global collided_screen
+    # Defining what will happen at the collision with sky, ground or pipe
+    def collision(self, current_image: str):
+        global collided
 
         # First load the current image to cancel the rotation, then rotate 90 degree
         self.bird.image = pg.image.load(current_image).convert_alpha() 
@@ -229,11 +230,12 @@ class FlappyBird:
         self.play_sound(self.sound_filenames['hit'])
         self.play_sound(self.sound_filenames['swoosh'])
 
-        collided_screen = True
+        collided = True
 
     
-    # Method to create a falling effect after collision
+    # Method to create a falling effect (bird jump) after collision
     def generate_falling_effect(self):
+        
         # If the bird hits the sky
         if self.bird.rect.top <= self.__ZERO:
             self.bird.rect.top = self.__ZERO            # Protect the bird from going out of the screen
@@ -243,11 +245,20 @@ class FlappyBird:
         # If the bird hits the ground
         elif pg.sprite.groupcollide(self.bird_group, self.ground_group, False, False):
                     
-            # Generate falling effect only if it does not hit the sky
-            if not self.collided_sky and not self.collided_ground:
+            # Generate falling effect only if it does not hit the sky or pipe
+            if not (self.collided_sky or self.collided_pipe) and not self.collided_ground:
                 self.bird.increase_y = SPEED * -3
 
                 self.collided_ground = True
+        
+        # If the bird hits the pipe
+        elif pg.sprite.groupcollide(self.bird_group, self.pipe_group, False, False):
+            
+            # Generate falling effect
+            if not self.collided_pipe:
+                self.bird.increase_y = SPEED * -3
+
+                self.collided_pipe = True
 
 
     # Generate Restart button when bird goes out of the screen
@@ -269,15 +280,16 @@ class FlappyBird:
     # Reset the game
     def reset_game(self):
         global playing
-        global collided_screen
+        global collided
 
         # Resetting game global variables
         playing = True
-        collided_screen = False
+        collided = False
 
         # Resetting the game variables
         self.collided_ground = False
         self.collided_sky = False
+        self.collided_pipe = False
 
         # Resetting the bird
         self.bird.__init__(self.BIRD_X, self.__SCREEN_HEIGHT//3)
@@ -325,7 +337,7 @@ class FlappyBird:
                     self.last_pipe_time = pg.time.get_ticks() - self.PIPE_TIME
 
             # Move the bird upwards
-            elif playing and not collided_screen:
+            elif playing and not collided:
 
                 if event.type == KEYDOWN and event.key == K_UP:
                     self.bird.increase_y = SPEED * -2
@@ -355,7 +367,7 @@ class FlappyBird:
             self.ground_group.update()
 
             # Blitting the message
-            if not playing and not collided_screen:
+            if not playing and not collided:
                 self.SCREEN.blit(
                     self.images['message'].convert_alpha(), 
                     (self.MESSAGE_X, self.MESSAGE_Y)
@@ -368,14 +380,18 @@ class FlappyBird:
             self.bird_group.update()
 
             # Check if the bird collided with the game screen
-            if playing and not collided_screen:
+            if playing and not collided:
 
-                # If bird hits the sky or the ground
-                if self.bird.rect.top <= self.__ZERO or self.bird.rect.bottom >= self.__GROUND_Y:
-                    self.collided_with_screen(self.bird.img_filenames[self.bird.index])
+                # If bird hits the sky, ground or pipe
+                if (
+                    self.bird.rect.top <= self.__ZERO or 
+                    self.bird.rect.bottom >= self.__GROUND_Y or
+                    pg.sprite.groupcollide(self.bird_group, self.pipe_group, False, False)
+                ):
+                    self.collision(self.bird.img_filenames[self.bird.index])
             
             # After collision generating falling effect
-            elif playing and collided_screen:
+            elif playing and collided:
                 self.generate_falling_effect()
 
                 # Falling of the bird and stop it when it is out of the screen
@@ -391,7 +407,7 @@ class FlappyBird:
                     )
 
             # Generating the pipes
-            if playing and not collided_screen:
+            if playing and not collided:
                 self.generate_pipes(self.PIPE_TIME)
             
             # Updating pygame display to create animation
