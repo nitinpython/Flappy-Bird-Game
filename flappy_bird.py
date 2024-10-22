@@ -1,6 +1,7 @@
 import pygame as pg
 from pygame.locals import *
 from sys import exit
+from random import randint
 
 
 # Defining global constants
@@ -99,6 +100,42 @@ class Ground(pg.sprite.Sprite):
                 self.rect.x = 0
 
 
+# Class for Pipe sprite
+class Pipe(pg.sprite.Sprite):
+    def __init__(self, x, y, flip:bool = False):
+        super().__init__()
+
+        self.img_filename = 'Images/pipe.png'
+        self.image = pg.image.load(self.img_filename).convert_alpha()
+
+        # Defining the gap between the pipes
+        self.GAP = 80
+    
+        # Top pipe
+        if flip:
+            self.image = pg.transform.flip(self.image, False, True)
+            
+            # Changing y to give the pipe gap
+            y -= self.GAP
+            self.rect = self.image.get_rect(bottomleft=(x, y))
+
+        # Bottom pipe
+        else:
+            # Changing y to give the pipe gap
+            y += self.GAP
+            self.rect = self.image.get_rect(topleft=(x, y))
+
+    
+    def update(self):
+        # Controlling scrolling animation
+        if playing and not collided_screen:
+            self.rect.x -= SPEED
+
+            # Remove the pipe objects from the group when they move out of the game window
+            if self.rect.right < 0:
+                self.kill()             # Remove the sprite from all Groups
+
+
 # Main game class containing the game code
 class FlappyBird:
     def __init__(self):
@@ -121,10 +158,14 @@ class FlappyBird:
         self.COLLISION_ANGLE = 90
         self.RESTART_X = self.__SCREEN_WIDTH//2 - 50
         self.RESTART_Y = self.__SCREEN_HEIGHT//2 - 100
+        self.PIPE_TIME = 1500               # 1500 Milliseconds = 1.5 Seconds
+        self.PIPE_Y_FROM = -110               # Lower limit for random y coordinate of pipe
+        self.PIPE_Y_TO = 70                   # Upper limit for random y coordinate of pipe
 
         # Defining variables
         self.collided_sky = False               # To create hitting effect
         self.collided_ground = False            # To create hitting effect
+        self.last_pipe_time = None              # To track the time last pipe was generated
 
         # Game window
         self.SCREEN = pg.display.set_mode((self.__SCREEN_WIDTH, self.__SCREEN_HEIGHT))
@@ -165,6 +206,9 @@ class FlappyBird:
         self.bird = Bird(self.BIRD_X, self.__SCREEN_HEIGHT//3)
         self.bird_group = pg.sprite.Group()
         self.bird_group.add(self.bird)
+
+        # Creating Pipe Group
+        self.pipe_group = pg.sprite.Group()
 
 
     # Method to load and play game sounds
@@ -234,7 +278,32 @@ class FlappyBird:
         # Resetting the bird
         self.bird.__init__(self.BIRD_X, self.__SCREEN_HEIGHT//3)
 
+        # Reset the pipes
+        self.pipe_group.empty()             # Remove all sprites from the group
 
+
+    # Method to generate pipes on the screen
+    def generate_pipes(self, after: int):
+        
+        time_now = pg.time.get_ticks()          # Return the number of milliseconds since pygame.init() was called
+
+        # Creating pipes after every 1.5 Seconds
+        if time_now - self.last_pipe_time >= after:
+                    
+            # Generating random y coordinate for the pipes
+            random_increase_y = randint(self.PIPE_Y_FROM, self.PIPE_Y_TO)
+            new_y = self.__SCREEN_HEIGHT//2.5 + random_increase_y
+
+            # Creating top and bottom pipes and adding them to the Group
+            self.bottom_pipe = Pipe(self.__SCREEN_WIDTH, new_y)
+            self.top_pipe = Pipe(self.__SCREEN_WIDTH, new_y, True)
+                    
+            self.pipe_group.add(self.bottom_pipe, self.top_pipe)
+
+            # Updating self.last_pipe_time
+            self.last_pipe_time = time_now
+    
+    
     # Method for event handling
     def event_handler(self):
         global playing
@@ -249,6 +318,7 @@ class FlappyBird:
             if not playing:
                 if pg.mouse.get_pressed()[0] or (event.type == KEYDOWN and event.key == K_SPACE):
                     playing = True
+                    self.last_pipe_time = pg.time.get_ticks() - self.PIPE_TIME
 
             # Move the bird upwards
             elif playing and not collided_screen:
@@ -268,6 +338,12 @@ class FlappyBird:
             # Blitting Background image
             self.SCREEN.blit(self.images['bg'].convert(), (self.__ZERO, self.__ZERO)) 
 
+            # Drawing the Pipes
+            self.pipe_group.draw(self.SCREEN)
+
+            # Scrolling the Pipes
+            self.pipe_group.update()
+
             # Drawing the Ground
             self.ground_group.draw(self.SCREEN)
 
@@ -281,7 +357,7 @@ class FlappyBird:
                     (self.MESSAGE_X, self.MESSAGE_Y)
                     )
 
-            # Drawing the bird
+            # Drawing the Bird
             self.bird_group.draw(self.SCREEN)
 
             # Flapping and Flying the bird
@@ -310,6 +386,10 @@ class FlappyBird:
                     (self.RESTART_X, self.RESTART_Y)
                     )
 
+            # Generating the pipes
+            if playing and not collided_screen:
+                self.generate_pipes(self.PIPE_TIME)
+            
             # Updating pygame display to create animation
             pg.display.update()
 
