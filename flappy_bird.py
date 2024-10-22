@@ -275,6 +275,10 @@ class FlappyBird:
         playing = True
         collided_screen = False
 
+        # Resetting the game variables
+        self.collided_ground = False
+        self.collided_sky = False
+
         # Resetting the bird
         self.bird.__init__(self.BIRD_X, self.__SCREEN_HEIGHT//3)
 
