@@ -161,13 +161,21 @@ class FlappyBird:
         self.PIPE_TIME = 1500               # 1500 Milliseconds = 1.5 Seconds
         self.PIPE_Y_FROM = -110               # Lower limit for random y coordinate of pipe
         self.PIPE_Y_TO = 70                   # Upper limit for random y coordinate of pipe
+        self.SCORE_X = self.__SCREEN_WIDTH//2
+        self.SCORE_Y = 15
 
         # Defining variables
         self.collided_sky = False               # To create sky hitting effect
         self.collided_ground = False            # To create ground hitting effect
         self.collided_pipe = False              # To create pipe hitting effect
         self.last_pipe_time = None              # To track the time last pipe was generated
+        self.score = 0
+        self.bird_between_pipes = False         # To increment score
 
+        # Defining font and text color for displaying score
+        self.font = pg.font.SysFont('Aerial', 70, True)
+        self.text_color = (255, 255, 255)
+        
         # Game window
         self.SCREEN = pg.display.set_mode((self.__SCREEN_WIDTH, self.__SCREEN_HEIGHT))
 
@@ -189,7 +197,8 @@ class FlappyBird:
         self.sound_filenames = {
             'wing' : 'Sounds/wing.mp3',
             'hit' : 'Sounds/hit.mp3',
-            'swoosh': 'Sounds/swoosh.mp3'
+            'swoosh': 'Sounds/swoosh.mp3',
+            'point': 'Sounds/point.mp3'
         }
         
         # Setting window title/caption and icon
@@ -214,7 +223,7 @@ class FlappyBird:
 
     # Method to load and play game sounds
     @staticmethod
-    def play_sound(filename):
+    def play_sound(filename: str):
         sound = pg.mixer.Sound(filename)
         sound.play()
 
@@ -290,6 +299,7 @@ class FlappyBird:
         self.collided_ground = False
         self.collided_sky = False
         self.collided_pipe = False
+        self.score = 0
 
         # Resetting the bird
         self.bird.__init__(self.BIRD_X, self.__SCREEN_HEIGHT//3)
@@ -318,6 +328,33 @@ class FlappyBird:
 
             # Updating self.last_pipe_time
             self.last_pipe_time = time_now
+    
+    
+    # Method to increase score
+    def increase_score(self):
+        
+        bird_sprite_left = self.bird_group.sprites()[0].rect.left
+        bird_sprite_right = self.bird_group.sprites()[0].rect.right
+
+        pipe_sprite_left = self.pipe_group.sprites()[0].rect.left
+        pipe_sprite_right = self.pipe_group.sprites()[0].rect.right
+
+        # If the bird is between the pipes
+        if (
+            bird_sprite_left > pipe_sprite_left and
+            bird_sprite_right < pipe_sprite_right
+            ):
+            
+            self.bird_between_pipes = True
+
+        # Increment the score if the bird crosses the pipe sucessfully after going between the pipes
+        if bird_sprite_left > pipe_sprite_right and self.bird_between_pipes:
+            
+            self.score += 1
+
+            self.play_sound(self.sound_filenames['point'])
+
+            self.bird_between_pipes = False 
     
     
     # Method for event handling
@@ -406,10 +443,18 @@ class FlappyBird:
                     (self.RESTART_X, self.RESTART_Y)
                     )
 
-            # Generating the pipes
+            # Generating the pipes and handling score
             if playing and not collided:
                 self.generate_pipes(self.PIPE_TIME)
-            
+
+                self.increase_score()
+
+            # Showing score while playing the game
+            if playing:
+                rendered_score = self.font.render(str(self.score), False, self.text_color).convert_alpha()
+                self.SCREEN.blit(rendered_score, (self.SCORE_X, self.SCORE_Y))
+
+
             # Updating pygame display to create animation
             pg.display.update()
 
