@@ -358,9 +358,12 @@ class FlappyBird:
             self.play_sound(self.sound_filenames['point'])
 
             # Increasing speed after every 10 points to add game difficulty
-            if self.score % 10 == 0:                
-                SPEED += 1                  # Increasing Ground and Pipe scrolling speed
+            multiple_of_10 = self.score % 10 == self.__ZERO
+            score_below_100 = self.score < 100                  # Increase speed only till the score is lesss than 100
 
+            if multiple_of_10 and score_below_100:                
+                SPEED += 1                  # Increasing Ground and Pipe scrolling speed
+                
             self.bird_between_pipes = False 
     
     
@@ -454,7 +457,12 @@ class FlappyBird:
 
             # Generating the pipes and handling score
             if playing and not collided:
-                self.generate_pipes(self.PIPE_TIME)
+
+                # Controlling speed of generating the Pipes
+                generate_pipe_after = (self.PIPE_TIME - SPEED * 100) + 400 
+                
+                # Generating the Pipes
+                self.generate_pipes(generate_pipe_after)
 
                 self.increase_score()
 
