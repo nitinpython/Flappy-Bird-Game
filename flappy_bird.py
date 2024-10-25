@@ -59,25 +59,23 @@ class Bird(pg.sprite.Sprite):
     # Controlling the bird movement (flapping and flying)
     def update(self):
 
-        if not collided:
-
-            # Reducing the flapping speed by showing same image for 4 iterations
-            if self.counter <= SPEED:   
-                self.image = pg.image.load(self.img_filenames[self.index]).convert_alpha()
-                self.counter += 1
+        # Reducing the flapping speed by showing same image for 4 iterations
+        if self.counter <= SPEED:   
+            self.image = pg.image.load(self.img_filenames[self.index]).convert_alpha()
+            self.counter += 1
                 
-                # Move the bird if user is playing the game
-                if playing:
-                    self.bird_movement()
+            # Move the bird if user is playing the game
+            if playing:
+                self.bird_movement()
 
 
-            # Changing the bird images to create the flapping effect
-            else:
-                # Reset the counter after 4 iterations
-                self.counter = 0
+        # Changing the bird images to create the flapping effect
+        else:
+            # Reset the counter after 4 iterations
+            self.counter = 0
 
-                # Changing the index to change the images
-                self.change_index()
+            # Changing the index to change the images
+            self.change_index()
                 
 
 # Class for Ground sprite
@@ -94,10 +92,11 @@ class Ground(pg.sprite.Sprite):
 
     # Controlling scrolling animation
     def update(self):
-        if not collided:
-            self.rect.x -= SPEED
-            if self.rect.x < self.scroll_limit:
-                self.rect.x = 0
+        self.rect.x -= SPEED
+
+        # Reset Ground sprite position
+        if self.rect.x < self.scroll_limit:
+            self.rect.x = 0
 
 
 # Class for Pipe sprite
@@ -126,14 +125,14 @@ class Pipe(pg.sprite.Sprite):
             self.rect = self.image.get_rect(topleft=(x, y))
 
     
+    # Controlling scrolling animation
     def update(self):
-        # Controlling scrolling animation
         if playing and not collided:
             self.rect.x -= SPEED
 
-            # Remove the pipe objects from the group when they move out of the game window
-            if self.rect.right < 0:
-                self.kill()             # Remove the sprite from all Groups
+        # Remove the pipe objects from the group when they move out of the game window
+        if self.rect.right < 0:
+            self.kill()             # Remove the sprite from all Groups
 
 
 # Main game class containing the game code
@@ -400,8 +399,16 @@ class FlappyBird:
             # Drawing the Ground
             self.ground_group.draw(self.SCREEN)
 
-            # Scrolling the Ground
-            self.ground_group.update()
+            # Drawing the Bird
+            self.bird_group.draw(self.SCREEN)
+
+            # Creating animation
+            if not collided:
+                # Scrolling the Ground
+                self.ground_group.update()
+
+                # Flapping and Flying the bird
+                self.bird_group.update()
 
             # Blitting the message
             if not playing and not collided:
@@ -409,12 +416,6 @@ class FlappyBird:
                     self.images['message'].convert_alpha(), 
                     (self.MESSAGE_X, self.MESSAGE_Y)
                     )
-
-            # Drawing the Bird
-            self.bird_group.draw(self.SCREEN)
-
-            # Flapping and Flying the bird
-            self.bird_group.update()
 
             # Check if the bird collided with the game screen
             if playing and not collided:
