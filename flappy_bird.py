@@ -5,7 +5,8 @@ from random import randint
 
 
 # Defining global constants
-SPEED = 4                       # Control the speed of Ground and Pipe scrolling and Bird flapping
+BIRD_CONSTANT = 4                       # Control bird movements like flapping speed, collision effect and upward movement
+SPEED = BIRD_CONSTANT                   # Control the speed of Ground and Pipe scrolling
 
 
 # Defining global variables
@@ -60,7 +61,7 @@ class Bird(pg.sprite.Sprite):
     def update(self):
 
         # Reducing the flapping speed by showing same image for 4 iterations
-        if self.counter <= SPEED:   
+        if self.counter <= BIRD_CONSTANT:   
             self.image = pg.image.load(self.img_filenames[self.index]).convert_alpha()
             self.counter += 1
                 
@@ -255,7 +256,7 @@ class FlappyBird:
                     
             # Generate falling effect only if it does not hit the sky or pipe
             if not (self.collided_sky or self.collided_pipe) and not self.collided_ground:
-                self.bird.increase_y = SPEED * -3
+                self.bird.increase_y = BIRD_CONSTANT * -3
 
                 self.collided_ground = True
         
@@ -264,7 +265,7 @@ class FlappyBird:
             
             # Generate falling effect
             if not self.collided_pipe:
-                self.bird.increase_y = SPEED * -3
+                self.bird.increase_y = BIRD_CONSTANT * -3
 
                 self.collided_pipe = True
 
@@ -289,10 +290,12 @@ class FlappyBird:
     def reset_game(self):
         global playing
         global collided
+        global SPEED
 
         # Resetting game global variables
         playing = True
         collided = False
+        SPEED = BIRD_CONSTANT
 
         # Resetting the game variables
         self.collided_ground = False
@@ -331,7 +334,8 @@ class FlappyBird:
     
     # Method to increase score
     def increase_score(self):
-        
+        global SPEED
+
         bird_sprite_left = self.bird_group.sprites()[0].rect.left
         bird_sprite_right = self.bird_group.sprites()[0].rect.right
 
@@ -352,6 +356,10 @@ class FlappyBird:
             self.score += 1
 
             self.play_sound(self.sound_filenames['point'])
+
+            # Increasing speed after every 10 points to add game difficulty
+            if self.score % 10 == 0:                
+                SPEED += 1                  # Increasing Ground and Pipe scrolling speed
 
             self.bird_between_pipes = False 
     
@@ -376,7 +384,7 @@ class FlappyBird:
             elif playing and not collided:
 
                 if event.type == KEYDOWN and event.key == K_UP:
-                    self.bird.increase_y = SPEED * -2
+                    self.bird.increase_y = BIRD_CONSTANT * -2
 
                     self.play_sound(self.sound_filenames['wing']) 
 
