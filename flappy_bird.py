@@ -198,7 +198,8 @@ class FlappyBird:
             'wing' : 'Sounds/wing.mp3',
             'hit' : 'Sounds/hit.mp3',
             'swoosh': 'Sounds/swoosh.mp3',
-            'point': 'Sounds/point.mp3'
+            'point': 'Sounds/point.mp3',
+            'die': 'Sounds/die.mp3'
         }
         
         # Setting window title/caption and icon
@@ -446,6 +447,11 @@ class FlappyBird:
                 # Falling of the bird and stop it when it is out of the screen
                 if self.bird.rect.top <= self.__SCREEN_HEIGHT:
                     self.bird.bird_movement()
+
+                    # Play die sound when the bird reaches below the ground
+                    if self.bird.rect.bottom >= self.__GROUND_Y and self.bird.rect.bottom < self.__SCREEN_HEIGHT:
+                        self.play_sound(self.sound_filenames['die'])
+
 
             # When bird goes out of the screen (vanishes from the screen)
             if self.bird.rect.top > self.__SCREEN_HEIGHT:
